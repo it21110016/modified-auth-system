@@ -1,0 +1,2 @@
+export const auth_api = `${window.location.protocol}//${window.location.hostname}:3000/api/v1/auth`;
+export const user_api = `${window.location.protocol}//${window.location.hostname}:5000/api/v1/user`;
