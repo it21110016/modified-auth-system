@@ -3,12 +3,12 @@ import User from "../models/User.js";
 // const nodemailer = require("nodemailer");
 
 // Generate Access Token (Short-lived)
-const generateAccessToken = (user) => {
+export const generateAccessToken = (user) => {
   return jwt.sign({ id: user._id, role: user.role, email: user.email, name: user.name }, process.env.ACCESS_SECRET, { expiresIn: "15m" }); // 15 minutes expiry
 };
 
 // Generate Refresh Token (Long-lived)
-const generateRefreshToken = (user) => {
+export const generateRefreshToken = (user) => {
   return jwt.sign({ id: user._id, role: user.role }, process.env.REFRESH_SECRET, { expiresIn: "7d" }); // 7 days expiry
 };
 

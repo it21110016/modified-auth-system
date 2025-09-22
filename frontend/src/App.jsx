@@ -11,6 +11,7 @@ import { AuthProvider } from "./context/AuthContext";
 import Home from "./pages/Home";
 import Access from "./pages/Access";
 import Fallback from "./pages/Fallback";
+import OauthSuccess from "./pages/OauthSuccess";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         <Route path="/" element={<Home />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/oauth-success" element={<OauthSuccess />} />
           <Route path="/access-denied" element={<Access />} />
           <Route path="/*" element={<Fallback />} />
 

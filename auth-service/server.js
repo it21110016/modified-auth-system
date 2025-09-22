@@ -10,6 +10,7 @@ import jwt from "jsonwebtoken";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import { generateAccessToken, generateRefreshToken } from "./controllers/authController.js";
 
 connectDB();
 dotenv.config();
@@ -52,13 +53,13 @@ app.use(morgan("dev"));
 
 // Global Rate Limiter (Limit each IP to 100 requests per 15 minutes)
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    message: "Too many requests from this IP, please try again later.",
-    standardHeaders: true, // Return rate limit info in headers
-    legacyHeaders: false, // Disable `X-RateLimit-*` headers
-  });
-  app.use(limiter);
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many requests from this IP, please try again later.",
+  standardHeaders: true, // Return rate limit info in headers
+  legacyHeaders: false, // Disable `X-RateLimit-*` headers
+});
+app.use(limiter);
 
 // Routes
 app.use("/api/v1/auth", authRoutes);
@@ -122,10 +123,50 @@ app.get('/auth/callback', async (req, res) => {
       maxAge: 60 * 60 * 1000,
     });
 
-    res.redirect(`${APP_URL}/?auth=success`);
+    // App-level user object
+    const user = { id: claims.sub, name: claims.name, email: claims.email, role: 'user' };
+
+    // Generate tokens
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    // Store refresh token securely in cookie
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: false, //  set to true in production
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // Redirect with access token + user info (frontend stores access token only)
+    const redirectUrl = `${APP_URL}/oauth-success?accessToken=${accessToken}&name=${encodeURIComponent(user.name)}&email=${encodeURIComponent(user.email)}&role=${user.role}`;
+    res.redirect(redirectUrl);
+
   } catch (err) {
     console.error(err);
     res.status(500).send('Auth failed');
+  }
+});
+
+app.get("/api/v1/auth/session", (req, res) => {
+  try {
+    const token = req.cookies.app_session;
+    if (!token) {
+      return res.status(401).json({ message: "Not logged in" });
+    }
+
+    const decoded = jwt.verify(token, APP_JWT_SECRET);
+
+    // Default role = user if none in token
+    const role = decoded.role || "user";
+
+    res.json({
+      name: decoded.name,
+      email: decoded.email,
+      role,
+    });
+  } catch (err) {
+    return res.status(401).json({ message: "Invalid session" });
   }
 });
 

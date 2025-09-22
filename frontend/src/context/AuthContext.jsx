@@ -18,20 +18,51 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const token = localStorage.getItem("accessToken");
-        if (!token) throw new Error("No token found");
-        decodeAndSetUser(token);
-      } catch {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadUser = async () => {
+    try {
+      let token = localStorage.getItem("accessToken");
 
-    loadUser();
-  }, []);
+      if (token) {
+        // Normal login flow
+        decodeAndSetUser(token);
+      } else {
+        // OAuth flow: check backend session
+        const res = await fetch("http://localhost:5000/api/v1/auth/session", {
+          credentials: "include", // important for cookies
+        });
+
+        if (!res.ok) throw new Error("No session");
+        const data = await res.json();
+
+        // Store role in localStorage (for consistency)
+        localStorage.setItem("userRole", data.role || "user");
+
+        setUser(data);
+      }
+    } catch {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadUser();
+}, []);
+
+// useEffect(() => {
+//   const urlParams = new URLSearchParams(window.location.search);
+//   const accessToken = urlParams.get("accessToken");
+
+//   if (accessToken) {
+//     localStorage.setItem("accessToken", accessToken);
+
+//     // Decode and set user
+//     decodeAndSetUser(accessToken);
+
+//     // Clean up URL
+//     window.history.replaceState({}, document.title, "/");
+//   }
+// }, []);
 
   const login = async (email, password) => {
     const data = await AuthService.login(email, password);
